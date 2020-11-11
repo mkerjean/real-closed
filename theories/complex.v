@@ -112,16 +112,6 @@ Next Obligation. by move=> [a b] /=; rewrite !add0r. Qed.
 Next Obligation. by move=> [a b] /=; rewrite !addNr. Qed.
 Canonical complex_zmodType := ZmodType R[i] complex_zmodMixin.
 
-Definition scalec (a : R) (x : R[i]) :=
-  let: b +i* c := x in (a * b) +i* (a * c).
-
-Program Definition complex_lmodMixin := @LmodMixin _ _ scalec _ _ _ _.
-Next Obligation. by move=> a b [c d] /=; rewrite !mulrA. Qed.
-Next Obligation. by move=> [a b] /=; rewrite !mul1r. Qed.
-Next Obligation. by move=> a [b c] [d e] /=; rewrite !mulrDr. Qed.
-Next Obligation. by move=> [a b] c d /=; rewrite !mulrDl. Qed.
-Canonical complex_lmodType := LmodType R R[i] complex_lmodMixin.
-
 End ComplexField_ringType.
 
 Section ComplexField_comRingType.
@@ -226,17 +216,6 @@ Local Notation C := R[i].
 Local Notation C0 := ((0 : R)%:C).
 Local Notation C1 := ((1 : R)%:C).
 
-Lemma Re_is_scalar : scalar (@Re R).
-Proof. by move=> a [b c] [d e]. Qed.
-
-Canonical Re_additive := Additive Re_is_scalar.
-Canonical Re_linear := Linear Re_is_scalar.
-
-Lemma Im_is_scalar : scalar (@Im R).
-Proof. by move=> a [b c] [d e]. Qed.
-
-Canonical Im_additive := Additive Im_is_scalar.
-Canonical Im_linear := Linear Im_is_scalar.
 
 Definition lec (x y : R[i]) :=
   let: a +i* b := x in let: c +i* d := y in
@@ -353,8 +332,8 @@ Canonical ComplexField.complex_numDomainType.
 Canonical ComplexField.complex_numFieldType.
 Canonical ComplexField.real_complex_rmorphism.
 Canonical ComplexField.real_complex_additive.
-Canonical ComplexField.Re_additive.
-Canonical ComplexField.Im_additive.
+(* Canonical ComplexField.Re_additive. *)
+(* Canonical ComplexField.Im_additive. *)
 
 Definition conjc {R : ringType} (x : R[i]) := let: a +i* b := x in a -i* b.
 Notation "x ^*" := (conjc x) (at level 2, format "x ^*") : complex_scope.
@@ -520,6 +499,19 @@ Proof. by move=> /complex_realP [y ->]. Qed.
 
 End ComplexTheory.
 
+Section RComplex.
+Variable (R : rcfType).
+
+Definition scalec (a : R) (x : R[i]) :=
+  let: b +i* c := x in (a * b) +i* (a * c).
+
+Program Definition complex_real_lmodMixin := @LmodMixin _ _ (scalec) _ _ _ _.    
+Next Obligation. by move=> a b [c d] /=; rewrite !mulrA. Qed.
+Next Obligation. by move=> [a b] /=; rewrite !mul1r. Qed.
+Next Obligation. by move=> a [b c] [d e] /=; rewrite !mulrDr. Qed.
+Next Obligation. by move=> [a b] c d /=; rewrite !mulrDl. Qed.
+Definition complex_real_lmodType := LmodType R R[i] (complex_real_lmodMixin).
+
 Definition Rcomplex := complex.
 Canonical Rcomplex_eqType (R : eqType) := [eqType of Rcomplex R].
 Canonical Rcomplex_countType (R : countType) := [countType of Rcomplex R].
@@ -531,22 +523,45 @@ Canonical Rcomplex_unitRingType (R : rcfType) := [unitRingType of Rcomplex R].
 Canonical Rcomplex_comUnitRingType (R : rcfType) := [comUnitRingType of Rcomplex R].
 Canonical Rcomplex_idomainType (R : rcfType) := [idomainType of Rcomplex R].
 Canonical Rcomplex_fieldType (R : rcfType) := [fieldType of Rcomplex R].
-Canonical Rcomplex_lmodType (R : rcfType) :=
-  LmodType R (Rcomplex R) (ComplexField.complex_lmodMixin R).
+Canonical Rcomplex_lmodType :=
+  LmodType R (Rcomplex R) (complex_real_lmodMixin).
+
+
+
+End RComplex.
 
 Module RComplexLMod.
 Section RComplexLMod.
 Variable R : rcfType.
-Implicit Types (k : R) (x y z : Rcomplex R).
-Canonical ComplexField.complex_lmodType.
+Implicit Types (k : R) (x y z : R[i]).
 
-Lemma conjc_is_scalable : scalable (conjc : Rcomplex R -> Rcomplex R).
+
+Canonical complex_RlmodType := (complex_real_lmodType R).
+
+Lemma conjc_is_scalable  : scalable (conjc : Rcomplex R -> Rcomplex R).
 Proof. by move=> a [b c]; simpc. Qed.
 Canonical conjc_linear := AddLinear conjc_is_scalable.
 
+Lemma Re_is_scalar : scalar (@Re R).
+Proof. by move=> a [b c] [d e]. Qed.
+
+Canonical Re_additive := Additive Re_is_scalar.
+Canonical Re_linear := Linear Re_is_scalar.
+
+Lemma Im_is_scalar : scalar (@Im R).
+Proof. by move=> a [b c] [d e]. Qed.
+
+Canonical Im_additive := Additive Im_is_scalar.
+Canonical Im_linear := Linear Im_is_scalar.
+
 End RComplexLMod.
 End RComplexLMod.
+
 Canonical RComplexLMod.conjc_linear.
+Canonical RComplexLMod.Re_additive.
+Canonical RComplexLMod.Re_linear.
+Canonical RComplexLMod.Im_additive.
+Canonical RComplexLMod.Im_linear.
 
 (* Section RcfDef. *)
 
@@ -1216,13 +1231,15 @@ End ComplexClosed.
 Section ComplexClosedTheory.
 
 Variable R : rcfType.
+  
+(* Canonical complex_real_lmodType. *)
 
 Lemma complexiE : 'i%C = 'i%R :> R[i].
 Proof. by []. Qed.
 
 Lemma complexRe (x : R[i]) : (Re x)%:C = 'Re x.
 Proof.
-rewrite {1}[x]Crect raddfD /= mulrC ReiNIm rmorphB /=.
+rewrite {1}[x]Crect  raddfD /= mulrC ReiNIm rmorphB /=.
 by rewrite ?RRe_real ?RIm_real ?Creal_Im ?Creal_Re // subr0.
 Qed.
 
